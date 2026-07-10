@@ -1,2 +1,0 @@
-# No pip dependencies are required.
-# The app uses only Python's standard library and opens a local browser UI.
