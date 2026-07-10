@@ -32,3 +32,18 @@ py main.py
 ```
 
 Then use the browser window that opens. If a browser does not open automatically, visit `http://127.0.0.1:8765`.
+
+## Windows executable
+
+GitHub Actions can build a standalone Windows executable, so end users do not need to install Python.
+
+To make a test build, open the repository's **Actions** tab, select **Build Windows executable**, and choose **Run workflow**. Download `DuplicatePhotoFinder-Windows` from the completed run's **Artifacts** section.
+
+To publish a version, push a tag whose name starts with `v`:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The workflow creates a GitHub Release containing `DuplicatePhotoFinder.exe` and its SHA-256 checksum.
