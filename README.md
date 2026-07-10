@@ -13,10 +13,6 @@ A small cross-platform Python app for finding duplicate photo filenames across t
 
 The app does not delete files yet. It is currently a safe review tool.
 
-## Dependencies
-
-No pip dependencies are required. The app uses Python's standard library and opens a local browser UI, so it does not require Tkinter or `_tkinter`.
-
 ## Run
 
 macOS/Linux:
