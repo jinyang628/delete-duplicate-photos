@@ -46,6 +46,35 @@ INDEX_HTML = """<!doctype html>
       padding: 16px;
     }
 
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab {
+      margin-bottom: -1px;
+      border: 0;
+      border-bottom: 3px solid transparent;
+      border-radius: 6px 6px 0 0;
+      color: var(--muted);
+      padding: 10px 14px;
+    }
+
+    .tab[aria-selected="true"] {
+      border-bottom-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .tab-panel[hidden] { display: none; }
+
+    .helper {
+      margin: 10px 0 0 180px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
     .folder-grid {
       display: grid;
       grid-template-columns: 180px 1fr;
@@ -178,10 +207,34 @@ INDEX_HTML = """<!doctype html>
 
     .confirm-resolved { grid-column: 1 / -1; }
 
+    .file-list {
+      display: grid;
+      gap: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .file-list-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .file-list-item code { margin: 0; }
+
+    .file-list-item button {
+      padding: 7px 10px;
+    }
+
     @media (max-width: 820px) {
       .folder-grid, .content { grid-template-columns: 1fr; }
+      .helper { margin-left: 0; }
       .actions { align-items: stretch; flex-direction: column; }
       button { width: 100%; }
+      .tabs { align-items: stretch; flex-direction: column; }
+      .file-list-item { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -190,11 +243,27 @@ INDEX_HTML = """<!doctype html>
     <h1>Duplicate Photo Finder</h1>
 
     <section class="panel">
-      <div class="folder-grid">
-        <label for="folderA">Folder A (keep)</label>
-        <input id="folderA" autocomplete="off">
-        <label for="folderB">Folder B (review)</label>
-        <input id="folderB" autocomplete="off">
+      <div class="tabs" role="tablist" aria-label="Duplicate scan type">
+        <button class="tab" id="acrossTab" role="tab" aria-selected="true" aria-controls="acrossPanel" data-mode="across">Across two folders</button>
+        <button class="tab" id="withinTab" role="tab" aria-selected="false" aria-controls="withinPanel" data-mode="within">Within one folder</button>
+      </div>
+
+      <div class="tab-panel" id="acrossPanel" role="tabpanel" aria-labelledby="acrossTab">
+        <div class="folder-grid">
+          <label for="folderA">Folder A</label>
+          <input id="folderA" autocomplete="off">
+          <label for="folderB">Folder B</label>
+          <input id="folderB" autocomplete="off">
+        </div>
+          <p class="helper">Scans the two folders and all of their subfolders for matching filenames.</p>
+      </div>
+
+      <div class="tab-panel" id="withinPanel" role="tabpanel" aria-labelledby="withinTab" hidden>
+        <div class="folder-grid">
+          <label for="folderWithin">Parent folder</label>
+          <input id="folderWithin" autocomplete="off">
+        </div>
+        <p class="helper">Scans this folder and all of its subfolders for matching filenames.</p>
       </div>
     </section>
 
@@ -209,8 +278,8 @@ INDEX_HTML = """<!doctype html>
           <thead>
             <tr>
               <th style="width: 24%">Filename</th>
-              <th style="width: 38%">Folder A File</th>
-              <th>Folder B File</th>
+              <th id="keepHeading" style="width: 38%">Folder A File</th>
+              <th id="reviewHeading">Folder B File</th>
             </tr>
           </thead>
           <tbody id="resultsBody">
@@ -234,12 +303,19 @@ INDEX_HTML = """<!doctype html>
   <script>
     const folderA = document.querySelector('#folderA');
     const folderB = document.querySelector('#folderB');
+    const folderWithin = document.querySelector('#folderWithin');
     const scanButton = document.querySelector('#scanButton');
     const statusEl = document.querySelector('#status');
     const resultsBody = document.querySelector('#resultsBody');
     const details = document.querySelector('#details');
+    const keepHeading = document.querySelector('#keepHeading');
+    const reviewHeading = document.querySelector('#reviewHeading');
+    const revealKeep = document.querySelector('#revealKeep');
+    const revealDelete = document.querySelector('#revealDelete');
+    const tabs = [...document.querySelectorAll('[role="tab"]')];
     const actionButtons = ['revealKeep', 'revealDelete', 'confirmResolved'].map(id => document.querySelector(`#${id}`));
 
+    let mode = 'across';
     let duplicates = [];
     const resolvedIndices = new Set();
     let selectedIndex = null;
@@ -260,6 +336,31 @@ INDEX_HTML = """<!doctype html>
       statusEl.classList.toggle('error', isError);
     }
 
+    function setMode(nextMode) {
+      mode = nextMode;
+      tabs.forEach(tab => {
+        const isActive = tab.dataset.mode === mode;
+        tab.setAttribute('aria-selected', String(isActive));
+        document.querySelector(`#${tab.getAttribute('aria-controls')}`).hidden = !isActive;
+      });
+
+      const isWithin = mode === 'within';
+      keepHeading.textContent = isWithin ? 'Matching Files' : 'Folder A File';
+      keepHeading.colSpan = isWithin ? 2 : 1;
+      reviewHeading.hidden = isWithin;
+      revealKeep.hidden = isWithin;
+      revealDelete.hidden = isWithin;
+      revealKeep.textContent = 'Reveal A';
+      revealDelete.textContent = 'Reveal B';
+
+      duplicates = [];
+      resolvedIndices.clear();
+      renderResults();
+      setStatus(isWithin
+        ? 'Enter one parent folder path, then scan.'
+        : 'Enter two folder paths, then scan.');
+    }
+
     function setSelected(index) {
       selectedIndex = index;
       document.querySelectorAll('tbody tr[data-index]').forEach(row => {
@@ -270,6 +371,15 @@ INDEX_HTML = """<!doctype html>
       actionButtons.forEach(button => button.disabled = !duplicate);
       if (!duplicate) {
         details.textContent = 'Select a result to review file paths.';
+        return;
+      }
+
+      if (mode === 'within') {
+        details.innerHTML = `
+          <div class="path-block"><strong>Filename</strong><code>${escapeHtml(duplicate.filename)}</code></div>
+          <div class="path-block"><strong>Copies found</strong><code>${duplicate.files.length}</code></div>
+          <p class="status">Use the Reveal button beside any file in the list to locate it.</p>
+        `;
         return;
       }
 
@@ -297,13 +407,32 @@ INDEX_HTML = """<!doctype html>
         const duplicate = duplicates[index];
         const row = document.createElement('tr');
         row.dataset.index = index;
-        row.innerHTML = `
-          <td>${escapeHtml(duplicate.filename)}</td>
-          <td>${escapeHtml(duplicate.keep.join('\\n'))}</td>
-          <td>${escapeHtml(duplicate.delete)}</td>
-        `;
+        if (mode === 'within') {
+          const fileList = duplicate.files.map((path, fileIndex) => `
+            <div class="file-list-item">
+              <code>${escapeHtml(path)}</code>
+              <button type="button" data-file-index="${fileIndex}">Reveal</button>
+            </div>
+          `).join('');
+          row.innerHTML = `
+            <td>${escapeHtml(duplicate.filename)}</td>
+            <td colspan="2"><div class="file-list">${fileList}</div></td>
+          `;
+          row.querySelectorAll('button[data-file-index]').forEach(button => {
+            button.addEventListener('click', event => {
+              event.stopPropagation();
+              revealFile(index, Number(button.dataset.fileIndex));
+            });
+          });
+        } else {
+          row.innerHTML = `
+            <td>${escapeHtml(duplicate.filename)}</td>
+            <td>${escapeHtml(duplicate.keep.join('\\n'))}</td>
+            <td>${escapeHtml(duplicate.delete)}</td>
+          `;
+          row.addEventListener('dblclick', () => openSelected('both'));
+        }
         row.addEventListener('click', () => setSelected(index));
-        row.addEventListener('dblclick', () => openSelected('both'));
         resultsBody.appendChild(row);
       });
       setSelected(visibleIndices[0]);
@@ -320,13 +449,21 @@ INDEX_HTML = """<!doctype html>
 
     async function scan() {
       scanButton.disabled = true;
-      setStatus('Scanning folders...');
+      setStatus(mode === 'within' ? 'Scanning folder...' : 'Scanning folders...');
       try {
-        const data = await api('/api/scan', { folderA: folderA.value, folderB: folderB.value });
+        const request = mode === 'within'
+          ? { mode, folder: folderWithin.value }
+          : { mode, folderA: folderA.value, folderB: folderB.value };
+        const data = await api('/api/scan', request);
         duplicates = data.duplicates;
         resolvedIndices.clear();
         renderResults();
-        setStatus(`Found ${duplicates.length} duplicate file(s).`);
+        if (mode === 'within') {
+          const fileCount = duplicates.reduce((total, duplicate) => total + duplicate.files.length, 0);
+          setStatus(`Found ${duplicates.length} duplicate filename group(s), containing ${fileCount} file(s).`);
+        } else {
+          setStatus(`Found ${duplicates.length} duplicate file(s).`);
+        }
       } catch (error) {
         duplicates = [];
         resolvedIndices.clear();
@@ -351,7 +488,20 @@ INDEX_HTML = """<!doctype html>
       if (selectedIndex === null) return;
       try {
         await api('/api/reveal', { index: selectedIndex, target });
-        setStatus(`Revealed selected Folder ${target === 'keep' ? 'A' : 'B'} file(s).`);
+        const label = mode === 'within'
+          ? (target === 'keep' ? 'keep' : 'matching')
+          : `Folder ${target === 'keep' ? 'A' : 'B'}`;
+        setStatus(`Revealed selected ${label} file(s).`);
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    }
+
+    async function revealFile(index, fileIndex) {
+      setSelected(index);
+      try {
+        await api('/api/reveal', { index, target: 'file', fileIndex });
+        setStatus('Revealed selected file.');
       } catch (error) {
         setStatus(error.message, true);
       }
@@ -364,19 +514,22 @@ INDEX_HTML = """<!doctype html>
       resolvedIndices.add(selectedIndex);
       renderResults();
       const remaining = duplicates.length - resolvedIndices.size;
-      setStatus(`Resolved ${filename}. ${remaining} duplicate file(s) remaining.`);
+      const unit = mode === 'within' ? 'duplicate filename group(s)' : 'duplicate file(s)';
+      setStatus(`Resolved ${filename}. ${remaining} ${unit} remaining.`);
     }
 
     scanButton.addEventListener('click', scan);
-    document.querySelector('#revealKeep').addEventListener('click', () => revealSelected('keep'));
-    document.querySelector('#revealDelete').addEventListener('click', () => revealSelected('delete'));
+    revealKeep.addEventListener('click', () => revealSelected('keep'));
+    revealDelete.addEventListener('click', () => revealSelected('delete'));
     document.querySelector('#confirmResolved').addEventListener('click', confirmResolved);
+    tabs.forEach(tab => tab.addEventListener('click', () => setMode(tab.dataset.mode)));
 
     fetch('/api/defaults')
       .then(response => response.json())
       .then(defaults => {
         folderA.value = defaults.folderA;
         folderB.value = defaults.folderB;
+        folderWithin.value = defaults.folderA;
       });
   </script>
 </body>

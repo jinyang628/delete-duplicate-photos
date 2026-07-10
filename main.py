@@ -14,7 +14,7 @@ from constants import DEFAULT_FOLDER_A, DEFAULT_FOLDER_B, HOST, PORT
 def scan_files(folder):
     files_by_name = {}
 
-    for path in folder.rglob("*"):
+    for path in sorted(folder.rglob("*"), key=lambda item: str(item).casefold()):
         if path.is_file():
             files_by_name.setdefault(path.name, []).append(path)
 
@@ -37,6 +37,23 @@ def find_duplicates(folder_a_files, folder_b_files):
                     "delete": str(delete_path),
                 }
             )
+
+    return duplicates
+
+
+def find_duplicates_within_folder(files_by_name):
+    duplicates = []
+
+    for filename, paths in files_by_name.items():
+        if len(paths) < 2:
+            continue
+
+        duplicates.append(
+            {
+                "filename": filename,
+                "files": [str(path) for path in paths],
+            }
+        )
 
     return duplicates
 
@@ -107,6 +124,22 @@ class DuplicatePhotoServer(BaseHTTPRequestHandler):
 
     def _scan(self):
         data = self._read_json()
+        mode = data.get("mode", "across")
+
+        if mode == "within":
+            folder = Path(data.get("folder", "")).expanduser()
+            if not folder.is_dir():
+                self._send_json({"error": f"Folder does not exist: {folder}"}, status=400)
+                return
+
+            type(self).duplicates = find_duplicates_within_folder(scan_files(folder))
+            self._send_json({"duplicates": type(self).duplicates})
+            return
+
+        if mode != "across":
+            self._send_json({"error": "Invalid scan mode."}, status=400)
+            return
+
         folder_a = Path(data.get("folderA", "")).expanduser()
         folder_b = Path(data.get("folderB", "")).expanduser()
 
@@ -134,6 +167,25 @@ class DuplicatePhotoServer(BaseHTTPRequestHandler):
 
         duplicate = type(self).duplicates[index]
         try:
+            if "files" in duplicate:
+                file_index = data.get("fileIndex")
+                files = duplicate["files"]
+                if (
+                    target != "file"
+                    or not isinstance(file_index, int)
+                    or file_index < 0
+                    or file_index >= len(files)
+                ):
+                    self._send_json({"error": "Invalid file selection."}, status=400)
+                    return
+
+                if reveal:
+                    reveal_path(files[file_index])
+                else:
+                    open_path(files[file_index])
+                self._send_json({"ok": True})
+                return
+
             if reveal and target == "keep":
                 for path in duplicate["keep"]:
                     reveal_path(path)
