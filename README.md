@@ -6,10 +6,10 @@ A small cross-platform Python app for finding duplicate photo filenames across t
 
 - Scans Folder A and Folder B recursively, including subfolders.
 - Treats files as duplicates when their filenames are identical.
-- Shows Folder A files as the copies to keep.
-- Shows matching Folder B files as review/delete candidates.
+- Shows matching Folder A and Folder B files.
 - Opens selected files with the default macOS or Windows app.
-- Reveals the Folder B candidate in Finder or Explorer.
+- Reveals either selected file in Finder or Explorer.
+- Removes reviewed matches from the table after they are confirmed as resolved.
 
 The app does not delete files yet. It is currently a safe review tool.
 

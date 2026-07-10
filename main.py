@@ -134,8 +134,14 @@ class DuplicatePhotoServer(BaseHTTPRequestHandler):
 
         duplicate = type(self).duplicates[index]
         try:
-            if reveal:
+            if reveal and target == "keep":
+                for path in duplicate["keep"]:
+                    reveal_path(path)
+            elif reveal and target == "delete":
                 reveal_path(duplicate["delete"])
+            elif reveal:
+                self._send_json({"error": "Invalid reveal target."}, status=400)
+                return
             elif target == "keep":
                 for path in duplicate["keep"]:
                     open_path(path)

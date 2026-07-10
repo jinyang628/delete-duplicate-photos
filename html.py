@@ -176,6 +176,8 @@ INDEX_HTML = """<!doctype html>
       margin-top: 14px;
     }
 
+    .confirm-resolved { grid-column: 1 / -1; }
+
     @media (max-width: 820px) {
       .folder-grid, .content { grid-template-columns: 1fr; }
       .actions { align-items: stretch; flex-direction: column; }
@@ -206,9 +208,9 @@ INDEX_HTML = """<!doctype html>
         <table>
           <thead>
             <tr>
-              <th style="width: 28%">Filename</th>
-              <th style="width: 14%">A copies</th>
-              <th>Folder B candidate</th>
+              <th style="width: 24%">Filename</th>
+              <th style="width: 38%">Folder A File</th>
+              <th>Folder B File</th>
             </tr>
           </thead>
           <tbody id="resultsBody">
@@ -221,10 +223,9 @@ INDEX_HTML = """<!doctype html>
         <h2>Selected duplicate</h2>
         <div id="details">Select a result to review file paths.</div>
         <div class="button-grid">
-          <button id="openKeep" disabled>Open A</button>
-          <button id="openDelete" disabled>Open B</button>
-          <button id="openBoth" disabled>Open Both</button>
+          <button id="revealKeep" disabled>Reveal A</button>
           <button id="revealDelete" disabled>Reveal B</button>
+          <button class="confirm-resolved" id="confirmResolved" disabled>Confirm Resolved</button>
         </div>
       </aside>
     </section>
@@ -237,9 +238,10 @@ INDEX_HTML = """<!doctype html>
     const statusEl = document.querySelector('#status');
     const resultsBody = document.querySelector('#resultsBody');
     const details = document.querySelector('#details');
-    const actionButtons = ['openKeep', 'openDelete', 'openBoth', 'revealDelete'].map(id => document.querySelector(`#${id}`));
+    const actionButtons = ['revealKeep', 'revealDelete', 'confirmResolved'].map(id => document.querySelector(`#${id}`));
 
     let duplicates = [];
+    const resolvedIndices = new Set();
     let selectedIndex = null;
 
     async function api(path, body) {
@@ -273,32 +275,38 @@ INDEX_HTML = """<!doctype html>
 
       details.innerHTML = `
         <div class="path-block"><strong>Filename</strong><code>${escapeHtml(duplicate.filename)}</code></div>
-        <div class="path-block"><strong>Folder A copies to keep</strong><code>${escapeHtml(duplicate.keep.join('\\n'))}</code></div>
-        <div class="path-block"><strong>Folder B candidate</strong><code>${escapeHtml(duplicate.delete)}</code></div>
+        <div class="path-block"><strong>Folder A File</strong><code>${escapeHtml(duplicate.keep.join('\\n'))}</code></div>
+        <div class="path-block"><strong>Folder B File</strong><code>${escapeHtml(duplicate.delete)}</code></div>
       `;
     }
 
     function renderResults() {
       resultsBody.innerHTML = '';
-      if (!duplicates.length) {
-        resultsBody.innerHTML = '<tr><td colspan="3" class="empty">No duplicate filenames found.</td></tr>';
+      const visibleIndices = duplicates
+        .map((duplicate, index) => index)
+        .filter(index => !resolvedIndices.has(index));
+
+      if (!visibleIndices.length) {
+        const message = duplicates.length ? 'All duplicates resolved.' : 'No duplicate filenames found.';
+        resultsBody.innerHTML = `<tr><td colspan="3" class="empty">${message}</td></tr>`;
         setSelected(null);
         return;
       }
 
-      duplicates.forEach((duplicate, index) => {
+      visibleIndices.forEach(index => {
+        const duplicate = duplicates[index];
         const row = document.createElement('tr');
         row.dataset.index = index;
         row.innerHTML = `
           <td>${escapeHtml(duplicate.filename)}</td>
-          <td>${duplicate.keep.length}</td>
+          <td>${escapeHtml(duplicate.keep.join('\\n'))}</td>
           <td>${escapeHtml(duplicate.delete)}</td>
         `;
         row.addEventListener('click', () => setSelected(index));
         row.addEventListener('dblclick', () => openSelected('both'));
         resultsBody.appendChild(row);
       });
-      setSelected(0);
+      setSelected(visibleIndices[0]);
     }
 
     function escapeHtml(value) {
@@ -316,10 +324,12 @@ INDEX_HTML = """<!doctype html>
       try {
         const data = await api('/api/scan', { folderA: folderA.value, folderB: folderB.value });
         duplicates = data.duplicates;
+        resolvedIndices.clear();
         renderResults();
         setStatus(`Found ${duplicates.length} duplicate file(s).`);
       } catch (error) {
         duplicates = [];
+        resolvedIndices.clear();
         renderResults();
         setStatus(error.message, true);
       } finally {
@@ -337,21 +347,30 @@ INDEX_HTML = """<!doctype html>
       }
     }
 
-    async function revealSelected() {
+    async function revealSelected(target) {
       if (selectedIndex === null) return;
       try {
-        await api('/api/reveal', { index: selectedIndex });
-        setStatus('Revealed selected Folder B file.');
+        await api('/api/reveal', { index: selectedIndex, target });
+        setStatus(`Revealed selected Folder ${target === 'keep' ? 'A' : 'B'} file(s).`);
       } catch (error) {
         setStatus(error.message, true);
       }
     }
 
+    function confirmResolved() {
+      if (selectedIndex === null) return;
+
+      const filename = duplicates[selectedIndex].filename;
+      resolvedIndices.add(selectedIndex);
+      renderResults();
+      const remaining = duplicates.length - resolvedIndices.size;
+      setStatus(`Resolved ${filename}. ${remaining} duplicate file(s) remaining.`);
+    }
+
     scanButton.addEventListener('click', scan);
-    document.querySelector('#openKeep').addEventListener('click', () => openSelected('keep'));
-    document.querySelector('#openDelete').addEventListener('click', () => openSelected('delete'));
-    document.querySelector('#openBoth').addEventListener('click', () => openSelected('both'));
-    document.querySelector('#revealDelete').addEventListener('click', revealSelected);
+    document.querySelector('#revealKeep').addEventListener('click', () => revealSelected('keep'));
+    document.querySelector('#revealDelete').addEventListener('click', () => revealSelected('delete'));
+    document.querySelector('#confirmResolved').addEventListener('click', confirmResolved);
 
     fetch('/api/defaults')
       .then(response => response.json())
