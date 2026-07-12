@@ -98,11 +98,11 @@ def reveal_path(path):
         raise FileNotFoundError(path)
 
     if sys.platform.startswith("win"):
-        # Keep the /select, switch separate from the path.  When they are
-        # combined, Python may quote the whole argument for paths containing
-        # spaces and Explorer then treats it as a location to open instead of
-        # a file to select.
-        subprocess.run(["explorer.exe", "/select,", os.path.normpath(path)], check=False)
+        # /n forces a new Explorer window instead of reusing one that may be
+        # minimized. Explorer expects the target to be part of the /select
+        # argument; subprocess handles quoting paths containing spaces.
+        select_argument = f"/select,{os.path.normpath(path)}"
+        subprocess.run(["explorer.exe", "/n,", select_argument], check=False)
     elif sys.platform == "darwin":
         subprocess.run(["open", "-R", str(path)], check=False)
     else:

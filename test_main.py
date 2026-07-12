@@ -9,7 +9,7 @@ import main
 class RevealPathTests(unittest.TestCase):
     @patch("main.subprocess.run")
     @patch("main.sys.platform", "win32")
-    def test_windows_passes_select_switch_separately(self, run):
+    def test_windows_opens_new_window_with_file_selected(self, run):
         target = Path("photo folder") / "image.jpg"
 
         with patch.object(Path, "exists", return_value=True):
@@ -17,7 +17,11 @@ class RevealPathTests(unittest.TestCase):
 
         resolved_target = target.resolve()
         run.assert_called_once_with(
-            ["explorer.exe", "/select,", main.os.path.normpath(resolved_target)],
+            [
+                "explorer.exe",
+                "/n,",
+                f"/select,{main.os.path.normpath(resolved_target)}",
+            ],
             check=False,
         )
 
