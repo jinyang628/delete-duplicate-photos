@@ -31,6 +31,10 @@ py main.py
 
 Then use the browser window that opens. If a browser does not open automatically, visit `http://127.0.0.1:8765`.
 
+Closing the app's browser tab or window also stops the local server. Refreshing the
+page leaves the app running. If the browser is forcibly terminated and cannot send
+its close notification, press Ctrl+C in the console to stop the server.
+
 ## Windows executable
 
 GitHub Actions can build a standalone Windows executable, so end users do not need to install Python.

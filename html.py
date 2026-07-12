@@ -319,6 +319,7 @@ INDEX_HTML = """<!doctype html>
     let duplicates = [];
     const resolvedIndices = new Set();
     let selectedIndex = null;
+    const clientId = crypto.randomUUID();
 
     async function api(path, body) {
       const response = await fetch(path, {
@@ -523,6 +524,15 @@ INDEX_HTML = """<!doctype html>
     revealDelete.addEventListener('click', () => revealSelected('delete'));
     document.querySelector('#confirmResolved').addEventListener('click', confirmResolved);
     tabs.forEach(tab => tab.addEventListener('click', () => setMode(tab.dataset.mode)));
+
+    // Register this tab with the local Python process. pagehide covers closing
+    // the tab/window and sendBeacon can finish even while the page is unloading.
+    window.addEventListener('pageshow', () => {
+      api('/api/connect', { clientId }).catch(() => {});
+    });
+    window.addEventListener('pagehide', () => {
+      navigator.sendBeacon('/api/disconnect', JSON.stringify({ clientId }));
+    });
 
     fetch('/api/defaults')
       .then(response => response.json())

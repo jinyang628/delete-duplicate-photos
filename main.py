@@ -112,6 +112,14 @@ class DuplicatePhotoServer(BaseHTTPRequestHandler):
             self._scan()
             return
 
+        if parsed.path == "/api/connect":
+            self._set_client_connected(True)
+            return
+
+        if parsed.path == "/api/disconnect":
+            self._set_client_connected(False)
+            return
+
         if parsed.path == "/api/open":
             self._open_selected(reveal=False)
             return
@@ -121,6 +129,19 @@ class DuplicatePhotoServer(BaseHTTPRequestHandler):
             return
 
         self._send_json({"error": "Not found"}, status=404)
+
+    def _set_client_connected(self, connected):
+        data = self._read_json()
+        client_id = data.get("clientId")
+        if not isinstance(client_id, str) or not client_id:
+            self._send_json({"error": "Invalid client ID."}, status=400)
+            return
+
+        if connected:
+            self.server.connect_client(client_id)
+        else:
+            self.server.disconnect_client(client_id)
+        self._send_json({"ok": True})
 
     def _scan(self):
         data = self._read_json()
@@ -238,8 +259,47 @@ class DuplicatePhotoServer(BaseHTTPRequestHandler):
         return
 
 
+class AppServer(ThreadingHTTPServer):
+    """HTTP server that exits after the final browser tab is closed."""
+
+    daemon_threads = True
+
+    def __init__(self, server_address, handler_class):
+        super().__init__(server_address, handler_class)
+        self._clients = set()
+        self._clients_lock = threading.Lock()
+        self._shutdown_timer = None
+
+    def connect_client(self, client_id):
+        with self._clients_lock:
+            self._clients.add(client_id)
+            if self._shutdown_timer is not None:
+                self._shutdown_timer.cancel()
+                self._shutdown_timer = None
+
+    def disconnect_client(self, client_id):
+        with self._clients_lock:
+            self._clients.discard(client_id)
+            if self._clients or self._shutdown_timer is not None:
+                return
+
+            # pagehide also fires during refresh. Give a refreshed page time to
+            # reconnect before deciding that the application was really closed.
+            self._shutdown_timer = threading.Timer(2.0, self._stop_if_unused)
+            self._shutdown_timer.daemon = True
+            self._shutdown_timer.start()
+
+    def _stop_if_unused(self):
+        with self._clients_lock:
+            self._shutdown_timer = None
+            if self._clients:
+                return
+        print("\nBrowser tab closed. Stopping Duplicate Photo Finder.")
+        self.shutdown()
+
+
 def main():
-    server = ThreadingHTTPServer((HOST, PORT), DuplicatePhotoServer)
+    server = AppServer((HOST, PORT), DuplicatePhotoServer)
     url = f"http://{HOST}:{PORT}"
     print(f"Duplicate Photo Finder is running at {url}")
     print("Press Ctrl+C to stop the app.")
