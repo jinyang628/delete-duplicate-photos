@@ -4,7 +4,7 @@ INDEX_HTML = """<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Duplicate Photo Finder</title>
+  <title>Duplicate File Finder</title>
   <style>
     :root {
       color-scheme: light;
@@ -73,6 +73,48 @@ INDEX_HTML = """<!doctype html>
       margin: 10px 0 0 180px;
       color: var(--muted);
       font-size: 13px;
+    }
+
+    .file-types {
+      border: 0;
+      border-top: 1px solid var(--border);
+      margin: 16px 0 0;
+      padding: 14px 0 0;
+    }
+
+    .file-types legend {
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 0 0 8px;
+    }
+
+    .option-list { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .file-type-option input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .file-type-option span {
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 8px 12px;
+    }
+
+    .file-type-option input:checked + span {
+      background: #eaf1ff;
+      border-color: var(--accent);
+      color: var(--accent-dark);
+    }
+
+    .file-type-option input:focus-visible + span {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
     }
 
     .folder-grid {
@@ -240,7 +282,7 @@ INDEX_HTML = """<!doctype html>
 </head>
 <body>
   <main>
-    <h1>Duplicate Photo Finder</h1>
+    <h1>Duplicate File Finder</h1>
 
     <section class="panel">
       <div class="tabs" role="tablist" aria-label="Duplicate scan type">
@@ -265,6 +307,16 @@ INDEX_HTML = """<!doctype html>
         </div>
         <p class="helper">Scans this folder and all of its subfolders for matching filenames.</p>
       </div>
+
+      <fieldset class="file-types">
+        <legend>File types to scan</legend>
+        <div class="option-list">
+          <label class="file-type-option"><input type="checkbox" name="fileType" value="images" checked><span>Images</span></label>
+          <label class="file-type-option"><input type="checkbox" name="fileType" value="videos"><span>Videos</span></label>
+          <label class="file-type-option"><input type="checkbox" name="fileType" value="word"><span>Word documents</span></label>
+          <label class="file-type-option"><input type="checkbox" name="fileType" value="excel"><span>Excel spreadsheets</span></label>
+        </div>
+      </fieldset>
     </section>
 
     <div class="actions">
@@ -449,12 +501,18 @@ INDEX_HTML = """<!doctype html>
     }
 
     async function scan() {
+      const fileTypes = [...document.querySelectorAll('input[name="fileType"]:checked')]
+        .map(input => input.value);
+      if (!fileTypes.length) {
+        setStatus('Select at least one file type to scan.', true);
+        return;
+      }
       scanButton.disabled = true;
       setStatus(mode === 'within' ? 'Scanning folder...' : 'Scanning folders...');
       try {
         const request = mode === 'within'
-          ? { mode, folder: folderWithin.value }
-          : { mode, folderA: folderA.value, folderB: folderB.value };
+          ? { mode, folder: folderWithin.value, fileTypes }
+          : { mode, folderA: folderA.value, folderB: folderB.value, fileTypes };
         const data = await api('/api/scan', request);
         duplicates = data.duplicates;
         resolvedIndices.clear();

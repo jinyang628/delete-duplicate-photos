@@ -8,15 +8,18 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
+from constants import DEFAULT_FOLDER_A, DEFAULT_FOLDER_B, FILE_TYPE_EXTENSIONS, HOST, PORT
 from html import INDEX_HTML
-from constants import DEFAULT_FOLDER_A, DEFAULT_FOLDER_B, HOST, PORT
 
-def scan_files(folder):
+def scan_files(folder, selected_types):
     files_by_name = {}
+    allowed_extensions = set().union(
+        *(FILE_TYPE_EXTENSIONS[file_type] for file_type in selected_types)
+    )
 
     for path in sorted(folder.rglob("*"), key=lambda item: str(item).casefold()):
-        if path.is_file():
-            files_by_name.setdefault(path.name, []).append(path)
+        if path.is_file() and path.suffix.casefold() in allowed_extensions:
+            files_by_name.setdefault(path.name.casefold(), []).append(path)
 
     return files_by_name
 
@@ -24,15 +27,15 @@ def scan_files(folder):
 def find_duplicates(folder_a_files, folder_b_files):
     duplicates = []
 
-    for filename, delete_paths in folder_b_files.items():
-        keep_paths = folder_a_files.get(filename)
+    for filename_key, delete_paths in folder_b_files.items():
+        keep_paths = folder_a_files.get(filename_key)
         if keep_paths is None:
             continue
 
         for delete_path in delete_paths:
             duplicates.append(
                 {
-                    "filename": filename,
+                    "filename": delete_path.name,
                     "keep": [str(path) for path in keep_paths],
                     "delete": str(delete_path),
                 }
@@ -44,13 +47,13 @@ def find_duplicates(folder_a_files, folder_b_files):
 def find_duplicates_within_folder(files_by_name):
     duplicates = []
 
-    for filename, paths in files_by_name.items():
+    for _filename_key, paths in files_by_name.items():
         if len(paths) < 2:
             continue
 
         duplicates.append(
             {
-                "filename": filename,
+                "filename": paths[0].name,
                 "files": [str(path) for path in paths],
             }
         )
@@ -150,6 +153,17 @@ class DuplicatePhotoServer(BaseHTTPRequestHandler):
     def _scan(self):
         data = self._read_json()
         mode = data.get("mode", "across")
+        selected_types = data.get("fileTypes")
+        if (
+            not isinstance(selected_types, list)
+            or not selected_types
+            or any(
+                not isinstance(file_type, str) or file_type not in FILE_TYPE_EXTENSIONS
+                for file_type in selected_types
+            )
+        ):
+            self._send_json({"error": "Select at least one valid file type."}, status=400)
+            return
 
         if mode == "within":
             folder = Path(data.get("folder", "")).expanduser()
@@ -157,7 +171,9 @@ class DuplicatePhotoServer(BaseHTTPRequestHandler):
                 self._send_json({"error": f"Folder does not exist: {folder}"}, status=400)
                 return
 
-            type(self).duplicates = find_duplicates_within_folder(scan_files(folder))
+            type(self).duplicates = find_duplicates_within_folder(
+                scan_files(folder, selected_types)
+            )
             self._send_json({"duplicates": type(self).duplicates})
             return
 
@@ -175,8 +191,8 @@ class DuplicatePhotoServer(BaseHTTPRequestHandler):
             self._send_json({"error": f"Folder B does not exist: {folder_b}"}, status=400)
             return
 
-        folder_a_files = scan_files(folder_a)
-        folder_b_files = scan_files(folder_b)
+        folder_a_files = scan_files(folder_a, selected_types)
+        folder_b_files = scan_files(folder_b, selected_types)
         type(self).duplicates = find_duplicates(folder_a_files, folder_b_files)
 
         self._send_json({"duplicates": type(self).duplicates})

@@ -1,11 +1,13 @@
 # Delete Duplicate Photos
 
-A small cross-platform Python app for finding duplicate photo filenames across two folders or within one parent folder.
+A small cross-platform Python app for finding duplicate filenames across two folders or within one parent folder.
 
 ## What it does
 
 - Scans Folder A and Folder B recursively, including subfolders.
-- Treats files as duplicates when their filenames are identical.
+- Lets you scan images, videos, Word documents, and Excel spreadsheets.
+- Only indexes file types selected before the scan.
+- Treats filenames and extensions case-insensitively, so `.JPG` and `.jpg` match.
 - Shows matching Folder A and Folder B files.
 - Can instead scan one parent folder recursively and review repeated filenames within it.
 - Groups every copy of a repeated filename into one scrollable list with a Reveal button for each file.
