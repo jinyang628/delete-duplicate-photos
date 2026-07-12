@@ -7,6 +7,7 @@ A small cross-platform Python app for finding duplicate filenames across two fol
 - Scans Folder A and Folder B recursively, including subfolders.
 - Lets you scan images, videos, Word documents, and Excel spreadsheets.
 - Only indexes file types selected before the scan.
+- Excludes files inside Windows recycle bins and macOS/Linux trash folders.
 - Treats filenames and extensions case-insensitively, so `.JPG` and `.jpg` match.
 - Shows matching Folder A and Folder B files.
 - Can instead scan one parent folder recursively and review repeated filenames within it.

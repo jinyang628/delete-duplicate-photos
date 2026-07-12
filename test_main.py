@@ -52,6 +52,29 @@ class ScanFilesTests(unittest.TestCase):
         self.assertEqual(len(duplicates), 1)
         self.assertEqual(len(duplicates[0]["files"]), 2)
 
+    def test_ignores_files_inside_recycle_bin_directories(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            recycle_bin = folder / "$RECYCLE.BIN" / "user-id"
+            recycle_bin.mkdir(parents=True)
+            (recycle_bin / "deleted.jpg").touch()
+            (folder / "kept.jpg").touch()
+
+            files = main.scan_files(folder, ["images"])
+
+        self.assertEqual(set(files), {"kept.jpg"})
+
+    def test_ignores_trash_directory_names_case_insensitively(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            trash = folder / ".TRASHES" / "501"
+            trash.mkdir(parents=True)
+            (trash / "deleted.png").touch()
+
+            files = main.scan_files(folder, ["images"])
+
+        self.assertEqual(files, {})
+
 
 if __name__ == "__main__":
     unittest.main()

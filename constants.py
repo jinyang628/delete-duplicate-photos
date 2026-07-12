@@ -21,3 +21,13 @@ FILE_TYPE_EXTENSIONS = {
         ".xltx",
     },
 }
+
+# System-managed trash folders found at drive roots and in user profiles.
+TRASH_DIRECTORY_NAMES = {
+    "$recycle.bin",
+    ".trash",
+    ".trashes",
+    "recycled",
+    "recycler",
+    "trash",
+}

@@ -8,7 +8,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from constants import DEFAULT_FOLDER_A, DEFAULT_FOLDER_B, FILE_TYPE_EXTENSIONS, HOST, PORT
+from constants import (
+    DEFAULT_FOLDER_A,
+    DEFAULT_FOLDER_B,
+    FILE_TYPE_EXTENSIONS,
+    HOST,
+    PORT,
+    TRASH_DIRECTORY_NAMES,
+)
 from html import INDEX_HTML
 
 def scan_files(folder, selected_types):
@@ -17,9 +24,20 @@ def scan_files(folder, selected_types):
         *(FILE_TYPE_EXTENSIONS[file_type] for file_type in selected_types)
     )
 
-    for path in sorted(folder.rglob("*"), key=lambda item: str(item).casefold()):
-        if path.is_file() and path.suffix.casefold() in allowed_extensions:
-            files_by_name.setdefault(path.name.casefold(), []).append(path)
+    for current_folder, directory_names, filenames in os.walk(folder):
+        directory_names[:] = sorted(
+            (
+                name
+                for name in directory_names
+                if name.casefold() not in TRASH_DIRECTORY_NAMES
+            ),
+            key=str.casefold,
+        )
+        current_path = Path(current_folder)
+        for filename in sorted(filenames, key=str.casefold):
+            path = current_path / filename
+            if path.suffix.casefold() in allowed_extensions:
+                files_by_name.setdefault(path.name.casefold(), []).append(path)
 
     return files_by_name
 
