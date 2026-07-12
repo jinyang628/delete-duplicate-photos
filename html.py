@@ -33,10 +33,38 @@ INDEX_HTML = """<!doctype html>
     }
 
     h1 {
-      margin: 0 0 16px;
+      margin: 0;
       font-size: 28px;
       font-weight: 700;
       letter-spacing: 0;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .language-toggle {
+      display: flex;
+      gap: 4px;
+      padding: 3px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .language-toggle button {
+      border: 0;
+      padding: 6px 10px;
+      color: var(--muted);
+    }
+
+    .language-toggle button[aria-pressed="true"] {
+      background: var(--accent);
+      color: #fff;
     }
 
     .panel {
@@ -277,50 +305,57 @@ INDEX_HTML = """<!doctype html>
       button { width: 100%; }
       .tabs { align-items: stretch; flex-direction: column; }
       .file-list-item { grid-template-columns: 1fr; }
+      .language-toggle button { width: auto; }
     }
   </style>
 </head>
 <body>
   <main>
-    <h1>Duplicate File Finder</h1>
+    <header class="page-header">
+      <h1 data-i18n="title">Duplicate File Finder</h1>
+      <div class="language-toggle" role="group" aria-label="Language" data-i18n-aria-label="language">
+        <button type="button" data-language="en" aria-pressed="true">English</button>
+        <button type="button" data-language="zh" aria-pressed="false">中文</button>
+      </div>
+    </header>
 
     <section class="panel">
-      <div class="tabs" role="tablist" aria-label="Duplicate scan type">
-        <button class="tab" id="acrossTab" role="tab" aria-selected="true" aria-controls="acrossPanel" data-mode="across">Across two folders</button>
-        <button class="tab" id="withinTab" role="tab" aria-selected="false" aria-controls="withinPanel" data-mode="within">Within one folder</button>
+      <div class="tabs" role="tablist" aria-label="Duplicate scan type" data-i18n-aria-label="scanType">
+        <button class="tab" id="acrossTab" role="tab" aria-selected="true" aria-controls="acrossPanel" data-mode="across" data-i18n="acrossTab">Across two folders</button>
+        <button class="tab" id="withinTab" role="tab" aria-selected="false" aria-controls="withinPanel" data-mode="within" data-i18n="withinTab">Within one folder</button>
       </div>
 
       <div class="tab-panel" id="acrossPanel" role="tabpanel" aria-labelledby="acrossTab">
         <div class="folder-grid">
-          <label for="folderA">Folder A</label>
+          <label for="folderA" data-i18n="folderA">Folder A</label>
           <input id="folderA" autocomplete="off">
-          <label for="folderB">Folder B</label>
+          <label for="folderB" data-i18n="folderB">Folder B</label>
           <input id="folderB" autocomplete="off">
         </div>
-          <p class="helper">Scans the two folders and all of their subfolders for matching filenames.</p>
+          <p class="helper" data-i18n="acrossHelp">Scans the two folders and all of their subfolders for matching filenames.</p>
       </div>
 
       <div class="tab-panel" id="withinPanel" role="tabpanel" aria-labelledby="withinTab" hidden>
         <div class="folder-grid">
-          <label for="folderWithin">Parent folder</label>
+          <label for="folderWithin" data-i18n="parentFolder">Parent folder</label>
           <input id="folderWithin" autocomplete="off">
         </div>
-        <p class="helper">Scans this folder and all of its subfolders for matching filenames.</p>
+        <p class="helper" data-i18n="withinHelp">Scans this folder and all of its subfolders for matching filenames.</p>
       </div>
 
       <fieldset class="file-types">
-        <legend>File types to scan</legend>
+        <legend data-i18n="fileTypes">File types to scan</legend>
         <div class="option-list">
-          <label class="file-type-option"><input type="checkbox" name="fileType" value="images" checked><span>Images</span></label>
-          <label class="file-type-option"><input type="checkbox" name="fileType" value="videos"><span>Videos</span></label>
-          <label class="file-type-option"><input type="checkbox" name="fileType" value="word"><span>Word documents</span></label>
-          <label class="file-type-option"><input type="checkbox" name="fileType" value="excel"><span>Excel spreadsheets</span></label>
+          <label class="file-type-option"><input type="checkbox" name="fileType" value="images" checked><span data-i18n="images">Images</span></label>
+          <label class="file-type-option"><input type="checkbox" name="fileType" value="videos"><span data-i18n="videos">Videos</span></label>
+          <label class="file-type-option"><input type="checkbox" name="fileType" value="word"><span data-i18n="word">Word documents</span></label>
+          <label class="file-type-option"><input type="checkbox" name="fileType" value="excel"><span data-i18n="excel">Excel spreadsheets</span></label>
         </div>
       </fieldset>
     </section>
 
     <div class="actions">
-      <button class="primary" id="scanButton">Scan</button>
+      <button class="primary" id="scanButton" data-i18n="scan">Scan</button>
       <span class="status" id="status">Enter two folder paths, then scan.</span>
     </div>
 
@@ -329,7 +364,7 @@ INDEX_HTML = """<!doctype html>
         <table>
           <thead>
             <tr>
-              <th style="width: 24%">Filename</th>
+              <th style="width: 24%" data-i18n="filename">Filename</th>
               <th id="keepHeading" style="width: 38%">Folder A File</th>
               <th id="reviewHeading">Folder B File</th>
             </tr>
@@ -341,18 +376,55 @@ INDEX_HTML = """<!doctype html>
       </div>
 
       <aside class="panel details">
-        <h2>Selected duplicate</h2>
+        <h2 data-i18n="selectedDuplicate">Selected duplicate</h2>
         <div id="details">Select a result to review file paths.</div>
         <div class="button-grid">
           <button id="revealKeep" disabled>Reveal A</button>
           <button id="revealDelete" disabled>Reveal B</button>
-          <button class="confirm-resolved" id="confirmResolved" disabled>Confirm Resolved</button>
+          <button class="confirm-resolved" id="confirmResolved" disabled data-i18n="confirmResolved">Confirm Resolved</button>
         </div>
       </aside>
     </section>
   </main>
 
   <script>
+    const translations = {
+      en: {
+        title: 'Duplicate File Finder', language: 'Language', scanType: 'Duplicate scan type',
+        acrossTab: 'Across two folders', withinTab: 'Within one folder', folderA: 'Folder A', folderB: 'Folder B',
+        parentFolder: 'Parent folder', acrossHelp: 'Scans the two folders and all of their subfolders for matching filenames.',
+        withinHelp: 'Scans this folder and all of its subfolders for matching filenames.', fileTypes: 'File types to scan',
+        images: 'Images', videos: 'Videos', word: 'Word documents', excel: 'Excel spreadsheets', scan: 'Scan',
+        filename: 'Filename', folderAFile: 'Folder A File', folderBFile: 'Folder B File', matchingFiles: 'Matching Files',
+        selectedDuplicate: 'Selected duplicate', selectResult: 'Select a result to review file paths.', revealA: 'Reveal A',
+        revealB: 'Reveal B', reveal: 'Reveal', confirmResolved: 'Confirm Resolved', enterAcross: 'Enter two folder paths, then scan.',
+        enterWithin: 'Enter one parent folder path, then scan.', noResultsYet: 'No scan results yet.', noDuplicates: 'No duplicate filenames found.',
+        allResolved: 'All duplicates resolved.', copiesFound: 'Copies found', revealHelp: 'Use the Reveal button beside any file in the list to locate it.',
+        selectFileType: 'Select at least one file type to scan.', scanningFolder: 'Scanning folder...', scanningFolders: 'Scanning folders...',
+        opened: 'Opened selected file(s).', revealedFile: 'Revealed selected file.', revealedSelected: label => `Revealed selected ${label} file(s).`,
+        folderLabel: letter => `Folder ${letter}`, foundAcross: count => `Found ${count} duplicate file(s).`,
+        foundWithin: (groups, files) => `Found ${groups} duplicate filename group(s), containing ${files} file(s).`,
+        resolved: (name, remaining, within) => `Resolved ${name}. ${remaining} ${within ? 'duplicate filename group(s)' : 'duplicate file(s)'} remaining.`
+      },
+      zh: {
+        title: '重复文件查找器', language: '语言', scanType: '重复文件扫描方式', acrossTab: '对比两个文件夹', withinTab: '扫描一个文件夹',
+        folderA: '文件夹 A', folderB: '文件夹 B', parentFolder: '父文件夹', acrossHelp: '扫描这两个文件夹及其所有子文件夹，查找同名文件。',
+        withinHelp: '扫描此文件夹及其所有子文件夹，查找同名文件。', fileTypes: '要扫描的文件类型', images: '图片', videos: '视频',
+        word: 'Word 文档', excel: 'Excel 表格', scan: '扫描', filename: '文件名', folderAFile: '文件夹 A 中的文件',
+        folderBFile: '文件夹 B 中的文件', matchingFiles: '同名文件', selectedDuplicate: '选中的重复文件',
+        selectResult: '请选择一条结果以查看文件路径。', revealA: '在文件夹中显示 A', revealB: '在文件夹中显示 B', reveal: '显示位置',
+        confirmResolved: '确认已处理', enterAcross: '请输入两个文件夹路径，然后扫描。', enterWithin: '请输入一个父文件夹路径，然后扫描。',
+        noResultsYet: '尚无扫描结果。', noDuplicates: '未找到同名文件。', allResolved: '所有重复文件均已处理。', copiesFound: '找到的副本数',
+        revealHelp: '使用列表中各文件旁的“显示位置”按钮来定位文件。', selectFileType: '请至少选择一种要扫描的文件类型。',
+        scanningFolder: '正在扫描文件夹…', scanningFolders: '正在扫描文件夹…', opened: '已打开选中的文件。', revealedFile: '已显示选中文件的位置。',
+        revealedSelected: label => `已显示选中的${label}文件位置。`, folderLabel: letter => `文件夹 ${letter}`,
+        foundAcross: count => `找到 ${count} 个重复文件。`, foundWithin: (groups, files) => `找到 ${groups} 组同名文件，共 ${files} 个文件。`,
+        resolved: (name, remaining, within) => `已处理 ${name}。剩余 ${remaining} ${within ? '组同名文件' : '个重复文件'}。`
+      }
+    };
+
+    let language = 'en';
+    const t = key => translations[language][key];
     const folderA = document.querySelector('#folderA');
     const folderB = document.querySelector('#folderB');
     const folderWithin = document.querySelector('#folderWithin');
@@ -365,12 +437,15 @@ INDEX_HTML = """<!doctype html>
     const revealKeep = document.querySelector('#revealKeep');
     const revealDelete = document.querySelector('#revealDelete');
     const tabs = [...document.querySelectorAll('[role="tab"]')];
+    const languageButtons = [...document.querySelectorAll('[data-language]')];
     const actionButtons = ['revealKeep', 'revealDelete', 'confirmResolved'].map(id => document.querySelector(`#${id}`));
 
     let mode = 'across';
     let duplicates = [];
+    let hasScanned = false;
     const resolvedIndices = new Set();
     let selectedIndex = null;
+    let currentStatus = { key: 'enterAcross', args: [], isError: false };
     const clientId = crypto.randomUUID();
 
     async function api(path, body) {
@@ -389,6 +464,33 @@ INDEX_HTML = """<!doctype html>
       statusEl.classList.toggle('error', isError);
     }
 
+    function setStatusTranslation(key, ...args) {
+      currentStatus = { key, args, isError: false };
+      const value = t(key);
+      setStatus(typeof value === 'function' ? value(...args) : value);
+    }
+
+    function setLanguage(nextLanguage) {
+      language = nextLanguage;
+      document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
+      document.title = t('title');
+      document.querySelectorAll('[data-i18n]').forEach(element => {
+        element.textContent = t(element.dataset.i18n);
+      });
+      document.querySelectorAll('[data-i18n-aria-label]').forEach(element => {
+        element.setAttribute('aria-label', t(element.dataset.i18nAriaLabel));
+      });
+      languageButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.language === language)));
+      const isWithin = mode === 'within';
+      keepHeading.textContent = isWithin ? t('matchingFiles') : t('folderAFile');
+      reviewHeading.textContent = t('folderBFile');
+      revealKeep.textContent = t('revealA');
+      revealDelete.textContent = t('revealB');
+      renderResults();
+      const value = t(currentStatus.key);
+      if (value) setStatus(typeof value === 'function' ? value(...currentStatus.args) : value, currentStatus.isError);
+    }
+
     function setMode(nextMode) {
       mode = nextMode;
       tabs.forEach(tab => {
@@ -398,20 +500,19 @@ INDEX_HTML = """<!doctype html>
       });
 
       const isWithin = mode === 'within';
-      keepHeading.textContent = isWithin ? 'Matching Files' : 'Folder A File';
+      keepHeading.textContent = isWithin ? t('matchingFiles') : t('folderAFile');
       keepHeading.colSpan = isWithin ? 2 : 1;
       reviewHeading.hidden = isWithin;
       revealKeep.hidden = isWithin;
       revealDelete.hidden = isWithin;
-      revealKeep.textContent = 'Reveal A';
-      revealDelete.textContent = 'Reveal B';
+      revealKeep.textContent = t('revealA');
+      revealDelete.textContent = t('revealB');
 
       duplicates = [];
+      hasScanned = false;
       resolvedIndices.clear();
       renderResults();
-      setStatus(isWithin
-        ? 'Enter one parent folder path, then scan.'
-        : 'Enter two folder paths, then scan.');
+      setStatusTranslation(isWithin ? 'enterWithin' : 'enterAcross');
     }
 
     function setSelected(index) {
@@ -423,23 +524,23 @@ INDEX_HTML = """<!doctype html>
       const duplicate = duplicates[index];
       actionButtons.forEach(button => button.disabled = !duplicate);
       if (!duplicate) {
-        details.textContent = 'Select a result to review file paths.';
+        details.textContent = t('selectResult');
         return;
       }
 
       if (mode === 'within') {
         details.innerHTML = `
-          <div class="path-block"><strong>Filename</strong><code>${escapeHtml(duplicate.filename)}</code></div>
-          <div class="path-block"><strong>Copies found</strong><code>${duplicate.files.length}</code></div>
-          <p class="status">Use the Reveal button beside any file in the list to locate it.</p>
+          <div class="path-block"><strong>${t('filename')}</strong><code>${escapeHtml(duplicate.filename)}</code></div>
+          <div class="path-block"><strong>${t('copiesFound')}</strong><code>${duplicate.files.length}</code></div>
+          <p class="status">${t('revealHelp')}</p>
         `;
         return;
       }
 
       details.innerHTML = `
-        <div class="path-block"><strong>Filename</strong><code>${escapeHtml(duplicate.filename)}</code></div>
-        <div class="path-block"><strong>Folder A File</strong><code>${escapeHtml(duplicate.keep.join('\\n'))}</code></div>
-        <div class="path-block"><strong>Folder B File</strong><code>${escapeHtml(duplicate.delete)}</code></div>
+        <div class="path-block"><strong>${t('filename')}</strong><code>${escapeHtml(duplicate.filename)}</code></div>
+        <div class="path-block"><strong>${t('folderAFile')}</strong><code>${escapeHtml(duplicate.keep.join('\\n'))}</code></div>
+        <div class="path-block"><strong>${t('folderBFile')}</strong><code>${escapeHtml(duplicate.delete)}</code></div>
       `;
     }
 
@@ -450,7 +551,7 @@ INDEX_HTML = """<!doctype html>
         .filter(index => !resolvedIndices.has(index));
 
       if (!visibleIndices.length) {
-        const message = duplicates.length ? 'All duplicates resolved.' : 'No duplicate filenames found.';
+        const message = duplicates.length ? t('allResolved') : (hasScanned ? t('noDuplicates') : t('noResultsYet'));
         resultsBody.innerHTML = `<tr><td colspan="3" class="empty">${message}</td></tr>`;
         setSelected(null);
         return;
@@ -464,7 +565,7 @@ INDEX_HTML = """<!doctype html>
           const fileList = duplicate.files.map((path, fileIndex) => `
             <div class="file-list-item">
               <code>${escapeHtml(path)}</code>
-              <button type="button" data-file-index="${fileIndex}">Reveal</button>
+              <button type="button" data-file-index="${fileIndex}">${t('reveal')}</button>
             </div>
           `).join('');
           row.innerHTML = `
@@ -504,27 +605,30 @@ INDEX_HTML = """<!doctype html>
       const fileTypes = [...document.querySelectorAll('input[name="fileType"]:checked')]
         .map(input => input.value);
       if (!fileTypes.length) {
-        setStatus('Select at least one file type to scan.', true);
+        currentStatus = { key: 'selectFileType', args: [], isError: true };
+        setStatus(t('selectFileType'), true);
         return;
       }
       scanButton.disabled = true;
-      setStatus(mode === 'within' ? 'Scanning folder...' : 'Scanning folders...');
+      setStatusTranslation(mode === 'within' ? 'scanningFolder' : 'scanningFolders');
       try {
         const request = mode === 'within'
           ? { mode, folder: folderWithin.value, fileTypes }
           : { mode, folderA: folderA.value, folderB: folderB.value, fileTypes };
         const data = await api('/api/scan', request);
         duplicates = data.duplicates;
+        hasScanned = true;
         resolvedIndices.clear();
         renderResults();
         if (mode === 'within') {
           const fileCount = duplicates.reduce((total, duplicate) => total + duplicate.files.length, 0);
-          setStatus(`Found ${duplicates.length} duplicate filename group(s), containing ${fileCount} file(s).`);
+          setStatusTranslation('foundWithin', duplicates.length, fileCount);
         } else {
-          setStatus(`Found ${duplicates.length} duplicate file(s).`);
+          setStatusTranslation('foundAcross', duplicates.length);
         }
       } catch (error) {
         duplicates = [];
+        hasScanned = false;
         resolvedIndices.clear();
         renderResults();
         setStatus(error.message, true);
@@ -537,7 +641,7 @@ INDEX_HTML = """<!doctype html>
       if (selectedIndex === null) return;
       try {
         await api('/api/open', { index: selectedIndex, target });
-        setStatus('Opened selected file(s).');
+        setStatusTranslation('opened');
       } catch (error) {
         setStatus(error.message, true);
       }
@@ -548,9 +652,9 @@ INDEX_HTML = """<!doctype html>
       try {
         await api('/api/reveal', { index: selectedIndex, target });
         const label = mode === 'within'
-          ? (target === 'keep' ? 'keep' : 'matching')
-          : `Folder ${target === 'keep' ? 'A' : 'B'}`;
-        setStatus(`Revealed selected ${label} file(s).`);
+          ? t('matchingFiles')
+          : t('folderLabel')(target === 'keep' ? 'A' : 'B');
+        setStatusTranslation('revealedSelected', label);
       } catch (error) {
         setStatus(error.message, true);
       }
@@ -560,7 +664,7 @@ INDEX_HTML = """<!doctype html>
       setSelected(index);
       try {
         await api('/api/reveal', { index, target: 'file', fileIndex });
-        setStatus('Revealed selected file.');
+        setStatusTranslation('revealedFile');
       } catch (error) {
         setStatus(error.message, true);
       }
@@ -573,8 +677,7 @@ INDEX_HTML = """<!doctype html>
       resolvedIndices.add(selectedIndex);
       renderResults();
       const remaining = duplicates.length - resolvedIndices.size;
-      const unit = mode === 'within' ? 'duplicate filename group(s)' : 'duplicate file(s)';
-      setStatus(`Resolved ${filename}. ${remaining} ${unit} remaining.`);
+      setStatusTranslation('resolved', filename, remaining, mode === 'within');
     }
 
     scanButton.addEventListener('click', scan);
@@ -582,6 +685,7 @@ INDEX_HTML = """<!doctype html>
     revealDelete.addEventListener('click', () => revealSelected('delete'));
     document.querySelector('#confirmResolved').addEventListener('click', confirmResolved);
     tabs.forEach(tab => tab.addEventListener('click', () => setMode(tab.dataset.mode)));
+    languageButtons.forEach(button => button.addEventListener('click', () => setLanguage(button.dataset.language)));
 
     // Register this tab with the local Python process. pagehide covers closing
     // the tab/window and sendBeacon can finish even while the page is unloading.
